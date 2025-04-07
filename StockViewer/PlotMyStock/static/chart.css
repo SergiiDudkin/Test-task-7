@@ -1,0 +1,22 @@
+#chart-container {
+    margin: 0 20px;
+}
+
+table {
+    margin-left:auto;
+    margin-right:auto;
+    border-spacing: 20px 5px;
+}
+
+thead {
+    font: 16pt Arial, Helvetica, sans-serif;
+    font-weight: bold;
+}
+
+tbody {
+    font: 12pt "Times New Roman", Times, serif;
+}
+
+.rjust {
+    text-align: right;
+}
