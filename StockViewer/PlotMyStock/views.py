@@ -5,7 +5,8 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from plotly.io import to_html
 
-# Create your views here.
+
+# Settings
 
 SYMBOLS_ALL = sorted(["GBXXY", "RASP", "GOOGL", "MSFT", "BAC", "DTMXF", "EESE", "DGLY", "AKOM"])
 
@@ -29,40 +30,54 @@ TABLE_FIELDS = [
 ]
 
 
+# Views
+
 def index(request: WSGIRequest) -> HttpResponse:
-    data = {'title': 'Home', 'symbols_all': SYMBOLS_ALL}
-    return render(request, 'index.html', data)
+    data = {"title": "Home", "symbols_all": SYMBOLS_ALL}
+    return render(request, "index.html", data)
 
 
 def show_ticker(request: WSGIRequest, symbol: str) -> HttpResponse:
     ticker_obj = yf.Ticker(symbol)
-    ticker_info = ticker_obj.info
-    currency = ticker_info['currency']
 
+    fin_metrics = [(param, descr, ticker_obj.info.get(param, "&#8212;")) for param, descr in TABLE_FIELDS]
+
+    data = {"candlestick_chart": make_html_candle_chart(ticker_obj),
+            "fin_metrics": fin_metrics,
+            "company_name": ticker_obj.info["longName"],
+            "symbols_all": SYMBOLS_ALL}
+
+    return render(request, "chart.html", data)
+
+
+# Helpers
+
+def make_html_candle_chart(ticker_obj: yf.Ticker) -> str:
+    """
+    Creates candlestick chart of historical stock prices.
+
+    Args:
+        ticker_obj: The source of data.
+
+    Returns:
+        HTML element as a string.
+    """
     hist_df = ticker_obj.history(period="1y", interval="1wk").reset_index()
-    candlestick = go.Candlestick(x=hist_df['Date'],
-                                 open=hist_df['Open'],
-                                 high=hist_df['High'],
-                                 low=hist_df['Low'],
-                                 close=hist_df['Close'],
-                                 increasing_line_color='seagreen',
-                                 decreasing_line_color='crimson')
+    candlestick = go.Candlestick(x=hist_df["Date"],
+                                 open=hist_df["Open"],
+                                 high=hist_df["High"],
+                                 low=hist_df["Low"],
+                                 close=hist_df["Close"],
+                                 increasing_line_color="seagreen",
+                                 decreasing_line_color="crimson")
     fig = go.Figure(data=[candlestick])
     fig.update_layout(margin={"t": 0, "l": 0, "r": 3, "b": 0},
-                      plot_bgcolor='rgba(0.97, 0.97, 0.97, 1)',
-                      paper_bgcolor='rgba(0, 0, 0, 0)',
-                      yaxis_title=f'Stock price, {currency}')
-    fig.update_xaxes(mirror=True, showline=True, linecolor='lightgrey', gridcolor='lightgrey')
-    fig.update_yaxes(mirror=True, showline=True, linecolor='lightgrey', gridcolor='lightgrey')
+                      plot_bgcolor="rgba(0.97, 0.97, 0.97, 1)",
+                      paper_bgcolor="rgba(0, 0, 0, 0)",
+                      yaxis_title=f"Stock price, {ticker_obj.info['currency']}")
+    fig.update_xaxes(mirror=True, showline=True, linecolor="lightgrey", gridcolor="lightgrey")
+    fig.update_yaxes(mirror=True, showline=True, linecolor="lightgrey", gridcolor="lightgrey")
     html_chart = to_html(fig,
                          full_html=False,
-                         config={'displaylogo': False, 'modeBarButtonsToRemove': ['select2d', 'lasso2d']})
-
-    fin_metrics = [(param, descr, ticker_info.get(param, '&#8212;')) for param, descr in TABLE_FIELDS]
-
-    data = {'candlestick_chart': html_chart,
-            'company_name': ticker_info['longName'],
-            'fin_metrics': fin_metrics,
-            'symbols_all': SYMBOLS_ALL}
-
-    return render(request, 'chart.html', data)
+                         config={"displaylogo": False, "modeBarButtonsToRemove": ["select2d", "lasso2d"]})
+    return html_chart
