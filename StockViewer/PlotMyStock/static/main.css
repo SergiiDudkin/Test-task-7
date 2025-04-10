@@ -57,7 +57,7 @@ clickable {
 .dropdown-content {
     background-color: #56838f;
     margin-top: 2px;
-    max-height: 160px;
+    max-height: 192px;
     overflow-y: scroll;
 }
 

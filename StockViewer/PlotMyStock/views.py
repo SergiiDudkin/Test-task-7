@@ -13,6 +13,8 @@ from plotly.io import to_html
 # Settings
 
 SYMBOLS_ALL = sorted(["BMW.DE", "BABA", "GBXXY", "RASP", "GOOGL", "MSFT", "BAC", "DTMXF", "EESE", "DGLY", "AKOM"])
+PERIODS_ALL = ["6mo", "1y", "5y", "10y", "ytd", "max"]
+INTERVALS_ALL = ["1d", "1wk", "1mo", "3mo"]
 
 TABLE_FIELDS = [
     ("Previous Close", "The closing price from the previous trading session",
@@ -41,7 +43,7 @@ TABLE_FIELDS = [
      lambda ticker_obj: get_val_with_currency(ticker_obj, "trailingEps")),
     ("Earnings Date", "The period when a company publicly announces its earnings",
      lambda ticker_obj: get_earnings_date(ticker_obj)),
-    ("Dividend Rate", "The total amount of money that an investor receives as income from owning shares of a company",
+    ("Dividend Rate", "Annual dividend payment per share",
      lambda ticker_obj: get_val_with_currency(ticker_obj, "dividendRate")),
     ("Forward Dividend Yield", "An estimate of next year's dividend given as a percentage of the current stock price",
      lambda ticker_obj: get_val(ticker_obj, "dividendYield") + "%"),
@@ -61,17 +63,22 @@ CURRENCY_DICT = {
 # Views
 
 def index(request: WSGIRequest) -> HttpResponse:
-    data = {"title": "Home", "symbols_all": SYMBOLS_ALL}
+    data = {"title": "Home",
+            "symbols_all": SYMBOLS_ALL,
+            "curr": {"period": "6mo", "interval": "1d"}}
     return render(request, "index.html", data)
 
 
-def show_ticker(request: WSGIRequest, symbol: str) -> HttpResponse:
+def show_ticker(request: WSGIRequest, symbol: str, period: str, interval: str) -> HttpResponse:
     ticker_obj = yf.Ticker(symbol)
-    data = {"candlestick_chart": make_html_candle_chart(ticker_obj),
+    data = {"title": symbol,
+            "candlestick_chart": make_html_candle_chart(ticker_obj, period, interval),
             "fin_metrics": make_metrics_table(ticker_obj),
             "company_name": ticker_obj.info["longName"],
             "symbols_all": SYMBOLS_ALL,
-            "symbol": symbol}
+            "periods": PERIODS_ALL,
+            "intervals": INTERVALS_ALL,
+            "curr": {"symbol": symbol, "period": period, "interval": interval}}
 
     return render(request, "chart.html", data)
 
@@ -117,7 +124,7 @@ def get_earnings_date(ticker_obj: yf.Ticker) -> str:
     return earnings_date
 
 
-def make_html_candle_chart(ticker_obj: yf.Ticker) -> str:
+def make_html_candle_chart(ticker_obj: yf.Ticker, period: str, interval: str) -> str:
     """
     Creates candlestick chart of historical stock prices.
 
@@ -127,7 +134,7 @@ def make_html_candle_chart(ticker_obj: yf.Ticker) -> str:
     Returns:
         HTML element as a string.
     """
-    hist_df = ticker_obj.history(period="6mo", interval="1d").reset_index()
+    hist_df = ticker_obj.history(period=period, interval=interval).reset_index()
     candlestick = go.Candlestick(x=hist_df["Date"],
                                  open=hist_df["Open"],
                                  high=hist_df["High"],

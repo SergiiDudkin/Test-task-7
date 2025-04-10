@@ -16,7 +16,7 @@
                 <div class="dropdown-child">
                     <div class="dropdown-content">
                         {% for symbol in symbols_all %}
-                            <a href="{% url 'show_ticker' symbol=symbol %}">
+                            <a href="{% url 'show_ticker' symbol curr.period curr.interval %}">
                                 <div class="navblock clickable">
                                     {{ symbol }}
                                 </div>
@@ -25,6 +25,8 @@
                     </div>
 			    </div>
             </div>
+            {% block period_menu %}{% endblock %}
+            {% block interval_menu %}{% endblock %}
         </nav>
         <div class="main">
             {% block main %}{% endblock main %}

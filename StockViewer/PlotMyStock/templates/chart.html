@@ -5,8 +5,42 @@
     <link rel="stylesheet" type="text/css" href="{% static 'chart.css' %}">
 {% endblock stylesheet %}
 
+{% block period_menu %}
+    <div class="dropdown">
+        <div class="navblock">Period</div>
+        <div class="dropdown-child">
+            <div class="dropdown-content">
+                {% for period in periods %}
+                    <a href="{% url 'show_ticker' curr.symbol period curr.interval %}">
+                        <div class="navblock clickable">
+                            {{ period }}
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block interval_menu %}
+    <div class="dropdown">
+        <div class="navblock">Interval</div>
+        <div class="dropdown-child">
+            <div class="dropdown-content">
+                {% for interval in intervals %}
+                    <a href="{% url 'show_ticker' curr.symbol curr.period interval %}">
+                        <div class="navblock clickable">
+                            {{ interval }}
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
 {% block main %}
-    <h1>{{ company_name }} ({{ symbol }})</h1>
+    <h1>{{ company_name }} ({{ curr.symbol }})</h1>
     <div id="chart-container">
         {{ candlestick_chart | safe }}
     </div>
