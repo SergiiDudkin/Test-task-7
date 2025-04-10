@@ -11,22 +11,18 @@
         {{ candlestick_chart | safe }}
     </div>
     <h2>Key metrics</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Paramether</th>
-                <th>Description</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in fin_metrics %}
-                <tr>
-                    <td title="{{ row.1 }}">{{ row.0 }}</td>
-                    <td>{{ row.1 }}</td>
-                    <td class="rjust">{{ row.2 | safe }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="multicolumn">
+        {% for table in fin_metrics %}
+            <table>
+                <tbody>
+                    {% for row in table %}
+                        <tr>
+                            <td title="{{ row.1 }}">{{ row.0 }}</td>
+                            <td class="rjust">{{ row.2 | safe }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endfor %}
+    </div>
 {% endblock main %}

@@ -1,3 +1,7 @@
+import numbers
+from datetime import datetime
+from typing import Any
+
 import plotly.graph_objects as go
 import yfinance as yf
 from django.core.handlers.wsgi import WSGIRequest
@@ -8,34 +12,50 @@ from plotly.io import to_html
 
 # Settings
 
-SYMBOLS_ALL = sorted(["GBXXY", "RASP", "GOOGL", "MSFT", "BAC", "DTMXF", "EESE", "DGLY", "AKOM"])
+SYMBOLS_ALL = sorted(["BMW.DE", "BABA", "GBXXY", "RASP", "GOOGL", "MSFT", "BAC", "DTMXF", "EESE", "DGLY", "AKOM"])
 
 TABLE_FIELDS = [
-    ("bid", "An offer made by an individual or entity to purchase an asset."),
-    ("ask", "An offer price."),
-    ("regularMarketDayRange", "Difference between the highest and lowest prices during a single trading day"),
-    ("fiftyTwoWeekRange", "Difference between the highest and lowest prices during a single trading day the past 52 "
-                          "weeks"),
-    ("regularMarketVolume", "The total number of shares or contracts traded for a specific security during a regular "
-                            "trading session"),
-    ("averageVolume", "90 Days daily average volume"),
-    ("marketCap", "Market capitalization, a key indicator of a company's size"),
-    ("currentPrice", "The latest trading price of the stock"),
-    ("previousClose", "The closing price from the previous trading session"),
-    ("open", "The price at which the stock opened for trading"),
-    ("volume", "Number of shares traded during the day"),
-    ("epsTrailingTwelveMonths", "Earnings per share over the past 12 months"),
-    ("trailingPE", "Price-to-earnings ratio based on the trailing 12 months"),
-    ("forwardPE", "Price-to-earnings ratio based on projected future earnings"),
-    ("bookValue", "The net asset value of the company"),
-    ("priceToBook", "Market price compared to book value per share"),
-    ("dividendYield", "Annual dividend income as a percentage of the stock price"),
-    ("dividendRate", "Total expected annual dividend payout per share"),
-    ("beta", "A measure of the stock’s volatility relative to the market"),
-    ("revenuePerShare", "Revenue allocated per share"),
-    ("netIncomeToCommon", "Net income attributable to common shareholders"),
-    ("averageAnalystRating", "Consensus recommendation from financial analysts")
+    ("Previous Close", "The closing price from the previous trading session",
+     lambda ticker_obj: get_val_with_currency(ticker_obj, "previousClose")),
+    ("Open", "The first executed trade from the latest trading session",
+     lambda ticker_obj: get_val_with_currency(ticker_obj, "open")),
+    ("Bid", "An offer made by an individual or entity to purchase an asset",
+     lambda ticker_obj: get_val_with_currency(ticker_obj, "bid")),
+    ("Ask", "An offer price",
+     lambda ticker_obj: get_val_with_currency(ticker_obj, "ask")),
+    ("Day's Range", "Difference between the highest and lowest prices during a single trading day",
+     lambda ticker_obj: get_val_with_currency(ticker_obj, "regularMarketDayRange")),
+    ("52 Week Range", "Difference between the highest and lowest prices during a single trading day the past 52 weeks",
+     lambda ticker_obj: get_val_with_currency(ticker_obj, "fiftyTwoWeekRange")),
+    ("Volume", "The total number of shares traded for a specific security during a regular trading session",
+     lambda ticker_obj: get_val(ticker_obj, "regularMarketVolume")),
+    ("Avg. Volume", "90 Days daily average volume",
+     lambda ticker_obj: get_val(ticker_obj, "averageVolume")),
+    ("Market Cap", "The total market value of a company's outstanding shares",
+     lambda ticker_obj: get_val_with_currency(ticker_obj, "marketCap")),
+    ("Beta (5Y Monthly)", "A measure of a stock's volatility in relation to the overall market",
+     lambda ticker_obj: get_val(ticker_obj, "beta")),
+    ("PE Ratio (TTM)", "Price-to-earnings ratio based on the trailing 12 months",
+     lambda ticker_obj: get_val(ticker_obj, "trailingPE")),
+    ("EPS (TTM)", "Earnings per share calculated over the trailing twelve months",
+     lambda ticker_obj: get_val_with_currency(ticker_obj, "trailingEps")),
+    ("Earnings Date", "The period when a company publicly announces its earnings",
+     lambda ticker_obj: get_earnings_date(ticker_obj)),
+    ("Dividend Rate", "The total amount of money that an investor receives as income from owning shares of a company",
+     lambda ticker_obj: get_val_with_currency(ticker_obj, "dividendRate")),
+    ("Forward Dividend Yield", "An estimate of next year's dividend given as a percentage of the current stock price",
+     lambda ticker_obj: get_val(ticker_obj, "dividendYield") + "%"),
+    ("Ex-Dividend Date", "The date by which an investor must own a stock in order to receive the next dividend payment",
+     lambda ticker_obj: datetime.utcfromtimestamp(ticker_obj.info["exDividendDate"]).strftime('%b %d, %Y')),
+    ("1y Target Est", "Median target price forecasted by analysts over the next year",
+     lambda ticker_obj: get_val_with_currency(ticker_obj, "targetMedianPrice")),
 ]
+
+CURRENCY_DICT = {
+    "USD": "&#36;",
+    "EUR": "&#8364;",
+    "CNY": "&#20803;",
+}
 
 
 # Views
@@ -47,11 +67,8 @@ def index(request: WSGIRequest) -> HttpResponse:
 
 def show_ticker(request: WSGIRequest, symbol: str) -> HttpResponse:
     ticker_obj = yf.Ticker(symbol)
-
-    fin_metrics = [(param, descr, ticker_obj.info.get(param, "&#8212;")) for param, descr in TABLE_FIELDS]
-
     data = {"candlestick_chart": make_html_candle_chart(ticker_obj),
-            "fin_metrics": fin_metrics,
+            "fin_metrics": make_metrics_table(ticker_obj),
             "company_name": ticker_obj.info["longName"],
             "symbols_all": SYMBOLS_ALL,
             "symbol": symbol}
@@ -60,6 +77,45 @@ def show_ticker(request: WSGIRequest, symbol: str) -> HttpResponse:
 
 
 # Helpers
+
+def make_metrics_table(ticker_obj: yf.Ticker) -> list[list[tuple[str, str, Any]]]:
+    """
+    Extracts and formats data for output.
+
+    Args:
+        ticker_obj: The source of data.
+
+    Returns:
+        Key financial metrics in the form of three tables
+    """
+    table = [(metric_name, description, value_func(ticker_obj))
+             for metric_name, description, value_func in TABLE_FIELDS]
+
+    # Split one table into three (FIX for Mozilla Firefox)
+    max_row_num = (len(table) + 2) // 3
+    tables = [table[i * max_row_num: (i + 1) * max_row_num] for i in range(3)]
+
+    return tables
+
+
+def get_val(ticker_obj: yf.Ticker, field: str):
+    val = ticker_obj.info.get(field, '&#8212;')
+    return f"{val:,}" if isinstance(val, numbers.Number) else val
+
+
+def get_val_with_currency(ticker_obj: yf.Ticker, field: str) -> str:
+    currency = ticker_obj.info['currency']
+    return f"{CURRENCY_DICT.get(currency, currency)} {get_val(ticker_obj, field)}"
+
+
+def get_earnings_date(ticker_obj: yf.Ticker) -> str:
+    date_st = ticker_obj.info['earningsTimestampStart']
+    date_en = ticker_obj.info['earningsTimestampEnd']
+    earnings_date = datetime.utcfromtimestamp(date_st).strftime("%b %d, %Y")
+    if date_st != date_en:
+        earnings_date += " - " + datetime.utcfromtimestamp(date_en).strftime('%b %d, %Y')
+    return earnings_date
+
 
 def make_html_candle_chart(ticker_obj: yf.Ticker) -> str:
     """
@@ -71,7 +127,7 @@ def make_html_candle_chart(ticker_obj: yf.Ticker) -> str:
     Returns:
         HTML element as a string.
     """
-    hist_df = ticker_obj.history(period="1y", interval="1wk").reset_index()
+    hist_df = ticker_obj.history(period="6mo", interval="1d").reset_index()
     candlestick = go.Candlestick(x=hist_df["Date"],
                                  open=hist_df["Open"],
                                  high=hist_df["High"],
