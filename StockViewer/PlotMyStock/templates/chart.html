@@ -6,11 +6,11 @@
 {% endblock stylesheet %}
 
 {% block main %}
-    <h1>{{ company_name }}</h1>
+    <h1>{{ company_name }} ({{ symbol }})</h1>
     <div id="chart-container">
         {{ candlestick_chart | safe }}
     </div>
-    <h2>Key indicators</h2>
+    <h2>Key metrics</h2>
     <table>
         <thead>
             <tr>
@@ -22,7 +22,7 @@
         <tbody>
             {% for row in fin_metrics %}
                 <tr>
-                    <td>{{ row.0 }}</td>
+                    <td title="{{ row.1 }}">{{ row.0 }}</td>
                     <td>{{ row.1 }}</td>
                     <td class="rjust">{{ row.2 | safe }}</td>
                 </tr>

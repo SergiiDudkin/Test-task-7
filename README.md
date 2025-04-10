@@ -1,11 +1,12 @@
 # Description
-This is Django app that visualises data obtained by yfinance.
+This is a Django app that visualizes data obtained via yfinance API.
 
 
 # Run
 ```
 python manage.py runserver
 ```
+
 
 # Admin
 Username: admin

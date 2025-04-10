@@ -11,6 +11,14 @@ from plotly.io import to_html
 SYMBOLS_ALL = sorted(["GBXXY", "RASP", "GOOGL", "MSFT", "BAC", "DTMXF", "EESE", "DGLY", "AKOM"])
 
 TABLE_FIELDS = [
+    ("bid", "An offer made by an individual or entity to purchase an asset."),
+    ("ask", "An offer price."),
+    ("regularMarketDayRange", "Difference between the highest and lowest prices during a single trading day"),
+    ("fiftyTwoWeekRange", "Difference between the highest and lowest prices during a single trading day the past 52 "
+                          "weeks"),
+    ("regularMarketVolume", "The total number of shares or contracts traded for a specific security during a regular "
+                            "trading session"),
+    ("averageVolume", "90 Days daily average volume"),
     ("marketCap", "Market capitalization, a key indicator of a company's size"),
     ("currentPrice", "The latest trading price of the stock"),
     ("previousClose", "The closing price from the previous trading session"),
@@ -45,7 +53,8 @@ def show_ticker(request: WSGIRequest, symbol: str) -> HttpResponse:
     data = {"candlestick_chart": make_html_candle_chart(ticker_obj),
             "fin_metrics": fin_metrics,
             "company_name": ticker_obj.info["longName"],
-            "symbols_all": SYMBOLS_ALL}
+            "symbols_all": SYMBOLS_ALL,
+            "symbol": symbol}
 
     return render(request, "chart.html", data)
 
