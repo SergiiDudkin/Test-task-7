@@ -1,0 +1,6 @@
+django
+django-stubs
+plotly
+plotly-stubs
+pre-commit
+yfinance
