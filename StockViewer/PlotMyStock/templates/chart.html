@@ -13,7 +13,11 @@
                 {% for period in periods %}
                     <a href="{% url 'show_ticker' curr.symbol period curr.interval %}">
                         <div class="navblock clickable">
-                            {{ period }}
+                            {% if period == curr.period %}
+                                <u>{{ period }}</u>
+                            {% else %}
+                                {{ period }}
+                            {% endif %}
                         </div>
                     </a>
                 {% endfor %}
@@ -30,7 +34,11 @@
                 {% for interval in intervals %}
                     <a href="{% url 'show_ticker' curr.symbol curr.period interval %}">
                         <div class="navblock clickable">
-                            {{ interval }}
+                            {% if interval == curr.interval %}
+                                <u>{{ interval }}</u>
+                            {% else %}
+                                {{ interval }}
+                            {% endif %}
                         </div>
                     </a>
                 {% endfor %}

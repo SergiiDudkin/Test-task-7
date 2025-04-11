@@ -18,7 +18,11 @@
                         {% for symbol in symbols_all %}
                             <a href="{% url 'show_ticker' symbol curr.period curr.interval %}">
                                 <div class="navblock clickable">
-                                    {{ symbol }}
+                                    {% if symbol == curr.symbol %}
+                                        <u>{{ symbol }}</u>
+                                    {% else %}
+                                        {{ symbol }}
+                                    {% endif %}
                                 </div>
                             </a>
                         {% endfor %}

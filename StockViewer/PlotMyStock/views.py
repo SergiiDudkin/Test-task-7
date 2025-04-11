@@ -48,7 +48,7 @@ TABLE_FIELDS = [
     ("Forward Dividend Yield", "An estimate of next year's dividend given as a percentage of the current stock price",
      lambda ticker_obj: get_val(ticker_obj, "dividendYield") + "%"),
     ("Ex-Dividend Date", "The date by which an investor must own a stock in order to receive the next dividend payment",
-     lambda ticker_obj: datetime.utcfromtimestamp(ticker_obj.info["exDividendDate"]).strftime('%b %d, %Y')),
+     lambda ticker_obj: get_exdividend_date(ticker_obj)),
     ("1y Target Est", "Median target price forecasted by analysts over the next year",
      lambda ticker_obj: get_val_with_currency(ticker_obj, "targetMedianPrice")),
 ]
@@ -65,7 +65,7 @@ CURRENCY_DICT = {
 def index(request: WSGIRequest) -> HttpResponse:
     data = {"title": "Home",
             "symbols_all": SYMBOLS_ALL,
-            "curr": {"period": "6mo", "interval": "1d"}}
+            "curr": {"symbol": "", "period": "6mo", "interval": "1d"}}
     return render(request, "index.html", data)
 
 
@@ -106,13 +106,18 @@ def make_metrics_table(ticker_obj: yf.Ticker) -> list[list[tuple[str, str, Any]]
 
 
 def get_val(ticker_obj: yf.Ticker, field: str):
-    val = ticker_obj.info.get(field, '&#8212;')
+    val = ticker_obj.info.get(field, "&#8212;")
     return f"{val:,}" if isinstance(val, numbers.Number) else val
 
 
 def get_val_with_currency(ticker_obj: yf.Ticker, field: str) -> str:
-    currency = ticker_obj.info['currency']
+    currency = ticker_obj.info["currency"]
     return f"{CURRENCY_DICT.get(currency, currency)} {get_val(ticker_obj, field)}"
+
+
+def get_exdividend_date(ticker_obj: yf.Ticker) -> str:
+    timestamp = ticker_obj.info.get("exDividendDate")
+    return datetime.utcfromtimestamp(timestamp).strftime("%b %d, %Y") if timestamp else "&#8212;"
 
 
 def get_earnings_date(ticker_obj: yf.Ticker) -> str:
